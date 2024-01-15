@@ -64,7 +64,6 @@ class Contrastive(pl.LightningModule):
         outputs = self(dnam, rna)
         loss = nn.functional.mse_loss(comparison, outputs)
         return loss
-    
 
     def training_step(self,batch, batch_idx):
 
