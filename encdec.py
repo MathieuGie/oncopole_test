@@ -10,21 +10,30 @@ from sklearn.model_selection import train_test_split
 import copy
 import pandas as pd
 
+bio_entity = "dnam"
+
 batches = 128
 epochs = 800
 
 
 class Encoder(pl.LightningModule):
-    def __init__(self):
+    def __init__(self, entity,):
         super().__init__()
         
 
         self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
 
-        self.linear1 = nn.Linear(24443, 15000)
-        self.linear2 = nn.Linear(15000, 8000)
-        self.linear3 = nn.Linear(8000, 3000)
+        if entity=="dnam":
+            self.linear1 = nn.Linear(24443, 15000)
+            self.linear2 = nn.Linear(15000, 8000)
+            self.linear3 = nn.Linear(8000, 3000)
+
+        else:
+            self.linear1 = nn.Linear(19962, 12000)
+            self.linear2 = nn.Linear(12000, 7000)
+            self.linear3 = nn.Linear(7000, 2000)
+
 
   
     def forward(self, x):
@@ -36,15 +45,22 @@ class Encoder(pl.LightningModule):
         return (x-torch.min(x))/(torch.max(x)-torch.min(x))
     
 class Decoder(pl.LightningModule):
-    def __init__(self):
+    def __init__(self, entity):
         super().__init__()
         
         self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
 
-        self.linear1 = nn.Linear(3000, 8000)
-        self.linear2 = nn.Linear(8000, 15000)
-        self.linear3 = nn.Linear(15000, 24443)
+        if entity=="dnam":
+            self.linear1 = nn.Linear(3000, 8000)
+            self.linear2 = nn.Linear(8000, 15000)
+            self.linear3 = nn.Linear(15000, 24443)
+
+        else:
+            self.linear1 = nn.Linear(2000, 7000)
+            self.linear2 = nn.Linear(7000, 12000)
+            self.linear3 = nn.Linear(12000, 19962)
+
 
     def forward(self, x):
 
@@ -56,15 +72,15 @@ class Decoder(pl.LightningModule):
 
     
 class Encdec(pl.LightningModule):
-    def __init__(self,):
+    def __init__(self,entity):
         super().__init__()
 
         self.epochh=0
         self.val_loss=99999
         self.best_val_loss=999999
 
-        self.encoder = Encoder().to(mps_device)
-        self.decoder = Decoder().to(mps_device)
+        self.encoder = Encoder(entity).to(mps_device)
+        self.decoder = Decoder(entity).to(mps_device)
 
     def forward(self, x):
         
@@ -104,10 +120,10 @@ class Encdec(pl.LightningModule):
     
     def on_train_epoch_start(self):
 
-        if self.epochh>30 and self.val_loss<=self.best_val_loss:
-            torch.save(self.encoder.state_dict(), "encoder.chkpt")
-            torch.save(self.decoder.state_dict(), "decoder.chkpt")
-            self.best_val_loss = self.val_loss
+        #if self.epochh>-1 and self.val_loss<=self.best_val_loss:
+        torch.save(self.encoder.state_dict(), "encoder_"+bio_entity+".chkpt")
+        torch.save(self.decoder.state_dict(), "decoder_"+bio_entity+".chkpt")
+        self.best_val_loss = self.val_loss
 
         self.epochh+=1
         self.train()
@@ -130,8 +146,8 @@ class SequenceDataset(Dataset):
         features_tensor = torch.from_numpy(features).to(mps_device)
         return features_tensor
     
-path_train  = os.path.join('/Users/mathieugierski/Nextcloud/Macbook M3/Oncopole', 'train_dnam.csv')
-path_test  = os.path.join('/Users/mathieugierski/Nextcloud/Macbook M3/Oncopole', 'test_dnam.csv')
+path_train  = os.path.join('/Users/mathieugierski/Nextcloud/Macbook M3/Oncopole', 'train_'+bio_entity+'.csv')
+path_test  = os.path.join('/Users/mathieugierski/Nextcloud/Macbook M3/Oncopole', 'test_'+bio_entity+'.csv')
 
 #print(len(train_files))
 train_dataset = SequenceDataset(path_train)
@@ -159,12 +175,12 @@ else:
     print("found device: mps")
     mps_device = torch.device("mps")
 
-model = Encdec()
+model = Encdec(bio_entity)
 model.to(mps_device)
 
 print("model init done")
 
 mlf_logger = MLFlowLogger(experiment_name="lightning_logs", tracking_uri="file:./ml-runs")
 
-trainer = pl.Trainer(max_epochs=epochs, accelerator='cpu', logger=mlf_logger, log_every_n_steps=1)
+trainer = pl.Trainer(max_epochs=epochs, accelerator="auto", logger=mlf_logger, log_every_n_steps=1)
 trainer.fit(model, dataloader_train, dataloader_test)

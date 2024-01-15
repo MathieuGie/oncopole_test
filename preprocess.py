@@ -2,7 +2,7 @@ import pandas as pd
 import os
 import numpy as np
 
-bio_entity = "dnam"
+bio_entity = "rna"
 saving_path = '/Users/mathieugierski/Nextcloud/Macbook M3/Oncopole/train_'+bio_entity+'.csv'
 saving_path_mean = '/Users/mathieugierski/Nextcloud/Macbook M3/Oncopole/mean_'+bio_entity+'.csv'
 saving_path_min = '/Users/mathieugierski/Nextcloud/Macbook M3/Oncopole/min_'+bio_entity+'.csv'
@@ -20,6 +20,7 @@ def load_and_concatenate_csv(folder_path):
                 df = pd.read_csv(file_path, index_col=0)
 
                 #print(df.T.iloc[0])
+                df.columns.values[0] = str(i)
 
                 all_data = pd.concat([all_data, df.T])
                 print(all_data.shape)
@@ -27,7 +28,8 @@ def load_and_concatenate_csv(folder_path):
                 i+=1
 
     print(all_data.shape)
-    #print(all_data)
+    print(all_data)
+    print(all_data["ENSG00000002586.20_PAR_Y"])
     return all_data
 
 def replace_nones_with_mean(dataframe):
@@ -39,6 +41,8 @@ def replace_nones_with_mean(dataframe):
 
     columns_to_remove_list = columns_to_remove.tolist()
 
+    print(columns_to_remove)
+
     with open(saving_path_remove, 'w') as file:
         for column in columns_to_remove_list:
             file.write(f"{column}\n")
@@ -49,8 +53,23 @@ def replace_nones_with_mean(dataframe):
 
 def min_max_normalize(dataframe):
     print("min-max")
-    print(dataframe.min().shape)
-    return (dataframe - dataframe.min()) / (dataframe.max() - dataframe.min()), dataframe.min(), dataframe.max()
+    normalized_df = pd.DataFrame(index=dataframe.index, columns=dataframe.columns)
+    mini = dataframe.min()
+    maxi = dataframe.max()
+    
+    # Iterate over columns
+    for column in dataframe.columns:
+
+        min_val = mini[column]
+        max_val = maxi[column]
+        range_val = max_val - min_val
+
+        if range_val != 0:
+            normalized_df[column] = (dataframe[column] - min_val) / range_val
+        else:
+            normalized_df[column] = 0.0
+    
+    return normalized_df, mini, maxi
 
 # Folder path
 folder_path = '/Users/mathieugierski/Nextcloud/Macbook M3/Oncopole/data/train/'+bio_entity

@@ -2,7 +2,7 @@ import pandas as pd
 import os
 import numpy as np
 
-bio_entity = "dnam"
+bio_entity = "rna"
 main_dir = '/Users/mathieugierski/Nextcloud/Macbook M3/Oncopole/data/test'
 saving_path = '/Users/mathieugierski/Nextcloud/Macbook M3/Oncopole/test_'+bio_entity+'.csv'
 
@@ -62,10 +62,13 @@ def min_max_normalize(dataframe):
     mini = pd.read_csv(mini_path)
     maxi = pd.read_csv(maxi_path)
 
-    mini.set_index('Composite Element REF', inplace=True)
-    maxi.set_index('Composite Element REF', inplace=True)
-    #print((dataframe - mini.iloc[:, 0].values).shape)
-    #print(mini.shape, maxi.shape, (maxi- mini).shape)
+    if bio_entity=="dnam":
+        mini.set_index('Composite Element REF', inplace=True)
+        maxi.set_index('Composite Element REF', inplace=True)
+
+    elif bio_entity=="rna":
+        mini.set_index('gene_id', inplace=True)
+        maxi.set_index('gene_id', inplace=True)
 
     return (dataframe - mini.iloc[:, 0].values)/(maxi.iloc[:, 0].values-mini.iloc[:, 0].values)
 
