@@ -8,6 +8,7 @@ from lightning.pytorch.loggers import MLFlowLogger
 import random
 from sklearn.model_selection import train_test_split
 import copy
+import pandas as pd
 
 batches = 128
 epochs = 800
@@ -21,7 +22,7 @@ class Encoder(pl.LightningModule):
         self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
 
-        self.linear1 = nn.Linear(25978, 15000)
+        self.linear1 = nn.Linear(24443, 15000)
         self.linear2 = nn.Linear(15000, 8000)
         self.linear3 = nn.Linear(8000, 3000)
 
@@ -43,7 +44,7 @@ class Decoder(pl.LightningModule):
 
         self.linear1 = nn.Linear(3000, 8000)
         self.linear2 = nn.Linear(8000, 15000)
-        self.linear3 = nn.Linear(15000, 25978)
+        self.linear3 = nn.Linear(15000, 24443)
 
     def forward(self, x):
 
@@ -113,53 +114,30 @@ class Encdec(pl.LightningModule):
     
 
 class SequenceDataset(Dataset):
-    def __init__(self, dir, transform=None, file_list=None, subset_fraction=1):
+    def __init__(self, dir, sample_frac=1):
 
-        self.directory = dir
-        self.transform = transform
+        data = pd.read_csv(dir)
+        self.data = data.sample(frac=sample_frac)
 
-        self.all_images = []
-
-        if file_list is None:
-            file_list = []
-            if os.path.exists(dir):
-                file_list.extend(os.listdir(dir))
-
-        if os.path.exists(dir):
-            for img_name in file_list:
-                if img_name in os.listdir(dir) and img_name[0]!=".":
-                    img_path = os.path.join(dir, img_name)
-                    self.all_images.append(img_path)
-
-        self.all_images = random.sample(self.all_images, int(len(self.all_images) * subset_fraction))
+        print(self.data.shape)
 
     def __len__(self):
-        return len(self.all_images)
+        return len(self.data)
 
     def __getitem__(self, idx):
         
-        image = self.all_images[idx]
-        image = Image.open(image).convert('RGB')
-
-        if self.transform:
-            image = self.transform(image)
-
-        return image
+        features = self.data.iloc[idx, 1:].values.astype("float32")
+        features_tensor = torch.from_numpy(features).to(mps_device)
+        return features_tensor
     
-transform = transforms.Compose([
-    transforms.ToTensor(),  # Convert images to PyTorch tensors
-    # Add more transformations as needed
-])
+path_train  = os.path.join('/Users/mathieugierski/Nextcloud/Macbook M3/Oncopole', 'train_dnam.csv')
+path_test  = os.path.join('/Users/mathieugierski/Nextcloud/Macbook M3/Oncopole', 'test_dnam.csv')
 
-dir = '/Users/mathieugierski/Nextcloud/Macbook M3/Diffusion/CAT_00_treated'
-
-image_files = os.listdir(dir)
-random.shuffle(image_files)
-
-train_files, test_files = train_test_split(image_files, test_size=0.3)  # Adjust test_size as needed
 #print(len(train_files))
-train_dataset = ImageDataset(dir, transform, file_list=train_files)
-test_dataset = ImageDataset(dir, transform, file_list=test_files)
+train_dataset = SequenceDataset(path_train)
+print("training opened")
+test_dataset = SequenceDataset(path_test)
+print("testing opened")
 
 print("training set", len(train_dataset))
 print("test set", len(test_dataset))
@@ -178,6 +156,7 @@ if not torch.backends.mps.is_available():
               "and/or you do not have an MPS-enabled device on this machine.")
 
 else:
+    print("found device: mps")
     mps_device = torch.device("mps")
 
 model = Encdec()
@@ -187,5 +166,5 @@ print("model init done")
 
 mlf_logger = MLFlowLogger(experiment_name="lightning_logs", tracking_uri="file:./ml-runs")
 
-#trainer = pl.Trainer(max_epochs=epochs, accelerator="mps", logger=mlf_logger, log_every_n_steps=1)
-#trainer.fit(model, dataloader_train, dataloader_test)
+trainer = pl.Trainer(max_epochs=epochs, accelerator='cpu', logger=mlf_logger, log_every_n_steps=1)
+trainer.fit(model, dataloader_train, dataloader_test)
