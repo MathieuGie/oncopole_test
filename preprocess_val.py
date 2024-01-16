@@ -2,7 +2,7 @@ import pandas as pd
 import os
 import numpy as np
 
-bio_entity = "rna"
+bio_entity = "dnam"
 main_dir = '/Users/mathieugierski/Nextcloud/Macbook M3/Oncopole/data/test'
 saving_path = '/Users/mathieugierski/Nextcloud/Macbook M3/Oncopole/test_'+bio_entity+'.csv'
 

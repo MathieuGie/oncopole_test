@@ -35,12 +35,13 @@ class Contrastive(pl.LightningModule):
 
 
         self.relu = nn.ReLU()
+        self.sigmoid = nn.Sigmoid()
 
-        self.linear1 = nn.Linear(3000+2000, 8000)
-        self.linear2 = nn.Linear(8000, 2000)
-        self.linear3 = nn.Linear(2000, 800)
-        self.linear4 = nn.Linear(800, 100)
-        self.linear5 = nn.Linear(100, 20)
+        self.linear1 = nn.Linear(5000+4000, 10000)
+        self.linear2 = nn.Linear(10000, 2000)
+        #self.linear3 = nn.Linear(4000, 800)
+        self.linear4 = nn.Linear(2000, 200)
+        self.linear5 = nn.Linear(200, 20)
         self.linear6 = nn.Linear(20, 1)
 
     def forward(self, x_dnam, x_rna):
@@ -54,12 +55,12 @@ class Contrastive(pl.LightningModule):
         
         x = self.relu(self.linear1(x))
         x = self.relu(self.linear2(x))
-        x = self.relu(self.linear3(x))
+        #x = self.relu(self.linear3(x))
         x = self.relu(self.linear4(x))
         x = self.relu(self.linear5(x))
         x = self.linear6(x)
 
-        return x
+        return self.sigmoid(x)
     
     def _step(self, dnam, rna, comparison):
 
@@ -118,6 +119,10 @@ class ContrastiveDataset(Dataset):
         self.dnam_df = pd.read_csv(path_dnam)
         self.rna_df = pd.read_csv(path_rna)
 
+        print(sett, self.dnam_df.shape, self.rna_df.shape)
+
+        self.sett = sett
+
     def __len__(self):
         return self.dnam_df.shape[0]
 
@@ -125,9 +130,10 @@ class ContrastiveDataset(Dataset):
         dnam_seq = self.dnam_df.iloc[idx, 1:].values.astype("float32")
         rna_seq = self.rna_df.iloc[idx, 1:].values.astype("float32")
 
-        rand = np.random.randint(0, self.dnam_df.shape[0])
+
+        rand = np.random.randint(0, self.rna_df.shape[0])
         while rand==idx:
-            rand = np.random.randint(0, self.dnam_df.shape[0])
+            rand = np.random.randint(0, self.rna_df.shape[0])
 
         random_rna_seq = self.rna_df.iloc[rand, 1:].values.astype("float32")
 
@@ -147,12 +153,7 @@ transform = transforms.Compose([
     # Add more transformations as needed
 ])
 
-dir = '/Users/mathieugierski/Nextcloud/Macbook M3/Diffusion/CAT_00_treated'
 
-image_files = os.listdir(dir)
-random.shuffle(image_files)
-
-train_files, test_files = train_test_split(image_files, test_size=0.3)  # Adjust test_size as needed
 #print(len(train_files))
 train_dataset = ContrastiveDataset("train")
 test_dataset = ContrastiveDataset("test")

@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 import copy
 import pandas as pd
 
-bio_entity = "rna"
+bio_entity = "dnam"
 
 batches = 128
 epochs = 800
@@ -117,7 +117,9 @@ class Encdec(pl.LightningModule):
     
     def on_train_epoch_start(self):
 
-        if self.epochh>15 and self.val_loss<=self.best_val_loss:
+        if self.epochh>12 and self.val_loss<=self.best_val_loss:
+
+            print("improving from", self.best_val_loss, "to:", self.val_loss)
             torch.save(self.encoder.state_dict(), "encoder_"+bio_entity+".chkpt")
             torch.save(self.decoder.state_dict(), "decoder_"+bio_entity+".chkpt")
             self.best_val_loss = self.val_loss
