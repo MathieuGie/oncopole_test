@@ -29,7 +29,6 @@ def load_and_concatenate_csv(folder_path):
 
     print(all_data.shape)
     print(all_data)
-    print(all_data["ENSG00000002586.20_PAR_Y"])
     return all_data
 
 def replace_nones_with_mean(dataframe):

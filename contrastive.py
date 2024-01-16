@@ -48,7 +48,9 @@ class Contrastive(pl.LightningModule):
         x_dnam = self.encoder_dnam(x_dnam)
         x_rna = self.encoder_rna(x_rna)
 
-        x = torch.cat(x_dnam, x_rna)
+        #print(x_rna.shape)
+
+        x = torch.cat((x_dnam, x_rna), axis=1)
         
         x = self.relu(self.linear1(x))
         x = self.relu(self.linear2(x))
@@ -73,7 +75,7 @@ class Contrastive(pl.LightningModule):
 
         loss_pos = self._step(dnam, rna, positive)
         loss_neg = self._step(dnam, rand_rna, negative)
-        loss = torch.mean(loss_pos, loss_neg)
+        loss = torch.mean(torch.stack([loss_pos, loss_neg]))
 
         self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 
@@ -87,7 +89,7 @@ class Contrastive(pl.LightningModule):
 
         loss_pos = self._step(dnam, rna, positive)
         loss_neg = self._step(dnam, rand_rna, negative)
-        loss = torch.mean(loss_pos, loss_neg)
+        loss = torch.mean(torch.stack([loss_pos, loss_neg]))
 
         self.log('val_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         
@@ -101,7 +103,7 @@ class Contrastive(pl.LightningModule):
     
     def on_train_epoch_start(self):
         
-        torch.save(self.encoder.state_dict(), "contrastive_.chkpt")
+        #torch.save(self.state_dict(), "contrastive_.chkpt")
 
         self.epochh+=1
         self.train()
@@ -130,9 +132,9 @@ class ContrastiveDataset(Dataset):
         random_rna_seq = self.rna_df.iloc[rand, 1:].values.astype("float32")
 
 
-        print("dnam", dnam_seq)
-        print("rna", rna_seq)
-        print("rand_rna", random_rna_seq)
+        #print("dnam", dnam_seq)
+        #print("rna", rna_seq)
+        #print("rand_rna", random_rna_seq)
 
         dnam = torch.from_numpy(dnam_seq).to(mps_device)
         rna = torch.from_numpy(rna_seq).to(mps_device)
@@ -181,5 +183,5 @@ print("model init done")
 
 mlf_logger = MLFlowLogger(experiment_name="lightning_logs", tracking_uri="file:./ml-runs")
 
-trainer = pl.Trainer(max_epochs=epochs, accelerator="cpu", logger=mlf_logger, log_every_n_steps=1)
+trainer = pl.Trainer(max_epochs=epochs, accelerator="mps", logger=mlf_logger, log_every_n_steps=1)
 trainer.fit(model, dataloader_train, dataloader_test)

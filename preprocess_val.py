@@ -40,7 +40,7 @@ def load_and_concatenate_csv(folder_path):
             
         
     print(all_data.shape)
-    #print(all_data)
+    #print(all_data["ENSG00000002586.20_PAR_Y"])
     return all_data
 
 def replace_nones_with_mean(dataframe):
@@ -58,7 +58,7 @@ def replace_nones_with_mean(dataframe):
 
 def min_max_normalize(dataframe):
     print("min-max")
-
+    normalized_df = pd.DataFrame(index=dataframe.index, columns=dataframe.columns)
     mini = pd.read_csv(mini_path)
     maxi = pd.read_csv(maxi_path)
 
@@ -70,7 +70,19 @@ def min_max_normalize(dataframe):
         mini.set_index('gene_id', inplace=True)
         maxi.set_index('gene_id', inplace=True)
 
-    return (dataframe - mini.iloc[:, 0].values)/(maxi.iloc[:, 0].values-mini.iloc[:, 0].values)
+    # Iterate over columns
+    for column in dataframe.columns:
+
+        min_val = mini.loc[column].values[0]
+        max_val = maxi.loc[column].values[0]
+        range_val = max_val - min_val
+
+        if range_val != 0.0:
+            normalized_df[column] = (dataframe[column] - min_val) / range_val
+        else:
+            normalized_df[column] = 0.0
+
+    return normalized_df
 
 # Folder path
 folder_path = '/Users/mathieugierski/Nextcloud/Macbook M3/Oncopole/data/test'

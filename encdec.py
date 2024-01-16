@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 import copy
 import pandas as pd
 
-bio_entity = "dnam"
+bio_entity = "rna"
 
 batches = 128
 epochs = 800
@@ -25,21 +25,19 @@ class Encoder(pl.LightningModule):
         self.sigmoid = nn.Sigmoid()
 
         if entity=="dnam":
-            self.linear1 = nn.Linear(24443, 15000)
-            self.linear2 = nn.Linear(15000, 8000)
-            self.linear3 = nn.Linear(8000, 3000)
+            self.linear1 = nn.Linear(24443, 14000)
+            self.linear3 = nn.Linear(14000, 5000)
 
         else:
-            self.linear1 = nn.Linear(19962, 12000)
-            self.linear2 = nn.Linear(12000, 7000)
-            self.linear3 = nn.Linear(7000, 2000)
+            self.linear1 = nn.Linear(19962, 11000)
+            self.linear3 = nn.Linear(11000, 4000)
 
 
   
     def forward(self, x):
         
         x = self.relu(self.linear1(x))
-        x = self.relu(self.linear2(x))
+        #x = self.relu(self.linear2(x))
         x = self.linear3(x)
 
         return (x-torch.min(x))/(torch.max(x)-torch.min(x))
@@ -52,20 +50,19 @@ class Decoder(pl.LightningModule):
         self.sigmoid = nn.Sigmoid()
 
         if entity=="dnam":
-            self.linear1 = nn.Linear(3000, 8000)
-            self.linear2 = nn.Linear(8000, 15000)
-            self.linear3 = nn.Linear(15000, 24443)
+            self.linear1 = nn.Linear(5000, 14000)
+            #self.linear2 = nn.Linear(10000, 16000)
+            self.linear3 = nn.Linear(14000, 24443)
 
         else:
-            self.linear1 = nn.Linear(2000, 7000)
-            self.linear2 = nn.Linear(7000, 12000)
-            self.linear3 = nn.Linear(12000, 19962)
+            self.linear1 = nn.Linear(4000, 11000)
+            self.linear3 = nn.Linear(11000, 19962)
 
 
     def forward(self, x):
 
         x = self.relu(self.linear1(x))
-        x = self.relu(self.linear2(x))
+        #x = self.relu(self.linear2(x))
         x = self.linear3(x)
 
         return self.sigmoid(x)
@@ -120,10 +117,10 @@ class Encdec(pl.LightningModule):
     
     def on_train_epoch_start(self):
 
-        #if self.epochh>-1 and self.val_loss<=self.best_val_loss:
-        torch.save(self.encoder.state_dict(), "encoder_"+bio_entity+".chkpt")
-        torch.save(self.decoder.state_dict(), "decoder_"+bio_entity+".chkpt")
-        self.best_val_loss = self.val_loss
+        if self.epochh>15 and self.val_loss<=self.best_val_loss:
+            torch.save(self.encoder.state_dict(), "encoder_"+bio_entity+".chkpt")
+            torch.save(self.decoder.state_dict(), "decoder_"+bio_entity+".chkpt")
+            self.best_val_loss = self.val_loss
 
         self.epochh+=1
         self.train()
@@ -135,8 +132,6 @@ class SequenceDataset(Dataset):
         data = pd.read_csv(dir)
         self.data = data.sample(frac=sample_frac)
 
-        print(self.data.shape)
-
     def __len__(self):
         return len(self.data)
 
@@ -144,6 +139,7 @@ class SequenceDataset(Dataset):
         
         features = self.data.iloc[idx, 1:].values.astype("float32")
         features_tensor = torch.from_numpy(features).to(mps_device)
+
         return features_tensor
     
 path_train  = os.path.join('/Users/mathieugierski/Nextcloud/Macbook M3/Oncopole', 'train_'+bio_entity+'.csv')
@@ -182,5 +178,5 @@ print("model init done")
 
 mlf_logger = MLFlowLogger(experiment_name="lightning_logs", tracking_uri="file:./ml-runs")
 
-trainer = pl.Trainer(max_epochs=epochs, accelerator="auto", logger=mlf_logger, log_every_n_steps=1)
+trainer = pl.Trainer(max_epochs=epochs, accelerator="mps", logger=mlf_logger, log_every_n_steps=1)
 trainer.fit(model, dataloader_train, dataloader_test)
