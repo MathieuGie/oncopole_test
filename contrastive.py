@@ -65,7 +65,10 @@ class Contrastive(pl.LightningModule):
     def _step(self, dnam, rna, comparison):
 
         outputs = self(dnam, rna)
-        loss = nn.functional.mse_loss(comparison, outputs)
+        #loss = nn.functional.mse_loss(comparison, outputs)
+
+        #print(comparison, outputs)
+        loss = nn.functional.binary_cross_entropy(outputs, comparison, reduction="mean")
         return loss
 
     def training_step(self,batch, batch_idx):
@@ -147,11 +150,6 @@ class ContrastiveDataset(Dataset):
         rand_rna = torch.from_numpy(random_rna_seq).to(mps_device)
 
         return dnam, rna, rand_rna
-    
-transform = transforms.Compose([
-    transforms.ToTensor(),  # Convert images to PyTorch tensors
-    # Add more transformations as needed
-])
 
 
 #print(len(train_files))

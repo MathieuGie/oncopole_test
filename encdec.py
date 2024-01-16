@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 import copy
 import pandas as pd
 
-bio_entity = "dnam"
+bio_entity = "rna"
 
 batches = 128
 epochs = 800
@@ -180,5 +180,5 @@ print("model init done")
 
 mlf_logger = MLFlowLogger(experiment_name="lightning_logs", tracking_uri="file:./ml-runs")
 
-trainer = pl.Trainer(max_epochs=epochs, accelerator="mps", logger=mlf_logger, log_every_n_steps=1)
-trainer.fit(model, dataloader_train, dataloader_test)
+#trainer = pl.Trainer(max_epochs=epochs, accelerator="mps", logger=mlf_logger, log_every_n_steps=1)
+#trainer.fit(model, dataloader_train, dataloader_test)
