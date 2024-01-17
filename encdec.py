@@ -25,12 +25,12 @@ class Encoder(pl.LightningModule):
         self.sigmoid = nn.Sigmoid()
 
         if entity=="dnam":
-            self.linear1 = nn.Linear(24443, 14000)
-            self.linear3 = nn.Linear(14000, 5000)
+            self.linear1 = nn.Linear(24443, 10000)
+            self.linear3 = nn.Linear(10000, 2000)
 
         else:
-            self.linear1 = nn.Linear(19962, 11000)
-            self.linear3 = nn.Linear(11000, 4000)
+            self.linear1 = nn.Linear(19962, 9000)
+            self.linear3 = nn.Linear(9000, 1500)
 
 
   
@@ -50,13 +50,12 @@ class Decoder(pl.LightningModule):
         self.sigmoid = nn.Sigmoid()
 
         if entity=="dnam":
-            self.linear1 = nn.Linear(5000, 14000)
-            #self.linear2 = nn.Linear(10000, 16000)
-            self.linear3 = nn.Linear(14000, 24443)
+            self.linear1 = nn.Linear(2000, 10000)
+            self.linear3 = nn.Linear(10000, 24443)
 
         else:
-            self.linear1 = nn.Linear(4000, 11000)
-            self.linear3 = nn.Linear(11000, 19962)
+            self.linear1 = nn.Linear(1500, 9000)
+            self.linear3 = nn.Linear(9000, 19962)
 
 
     def forward(self, x):
