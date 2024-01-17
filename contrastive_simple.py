@@ -18,10 +18,8 @@ import numpy as np
 batches = 64
 epochs = 800
 
-epsilon = 1
-
 #Proportion of wrong examples to give compared to true ones
-n_random_examples=6
+n_random_examples=5
 
 #size of sample for accuracy
 n_sample_accuracy=20
@@ -45,14 +43,13 @@ class Contrastive(pl.LightningModule):
         self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
 
-        self.linear1 = nn.Linear(24443, 6000)
+        #self.linear1 = nn.Linear(2000+1500, 6000)
+        self.linear1 = nn.Linear(24443+19962, 6000)
         self.linear2 = nn.Linear(6000, 2000)
-        self.linear3 = nn.Linear(2000, 200)
-
-        self.linear4 = nn.Linear(19962, 6000)
-        self.linear5 = nn.Linear(6000, 2000)
-        self.linear6 = nn.Linear(2000, 200)
-        
+        #self.linear3 = nn.Linear(4000, 800)
+        self.linear4 = nn.Linear(2000, 200)
+        self.linear5 = nn.Linear(200, 20)
+        self.linear6 = nn.Linear(20, 1)
 
     def forward(self, x_dnam, x_rna):
 
@@ -61,28 +58,24 @@ class Contrastive(pl.LightningModule):
 
         #print(x_rna.shape)
 
-        #x = torch.cat((x_dnam, x_rna), axis=1)
+        x = torch.cat((x_dnam, x_rna), axis=1)
+        
+        x = self.relu(self.linear1(x))
+        x = self.relu(self.linear2(x))
+        #x = self.relu(self.linear3(x))
+        x = self.relu(self.linear4(x))
+        x = self.relu(self.linear5(x))
+        x = self.linear6(x)
 
-        x_dnam = self.relu(self.linear1(x_dnam))
-        x_dnam = self.relu(self.linear2(x_dnam))
-        x_dnam = self.linear3(x_dnam)
-
-        x_rna = self.relu(self.linear4(x_rna))
-        x_rna = self.relu(self.linear5(x_rna))
-        x_rna = self.linear6(x_rna)
-
-        return x_dnam, x_rna
+        return self.sigmoid(x)
     
     def _step(self, dnam, rna, comparison):
 
-        outputs_dnam, outputs_rna = self(dnam, rna)
+        outputs = self(dnam, rna)
         #loss = nn.functional.mse_loss(comparison, outputs)
-        #loss = nn.functional.binary_cross_entropy(outputs, comparison, reduction="mean")
 
-        if torch.max(comparison)==1:
-            loss = nn.functional.mse_loss(outputs_dnam, outputs_rna)
-        else:
-            loss = epsilon-nn.functional.mse_loss(outputs_dnam, outputs_rna)
+        print(comparison[0,0], outputs[0,0])
+        loss = nn.functional.binary_cross_entropy(outputs, comparison, reduction="mean")
         return loss
 
     def training_step(self,batch, batch_idx):
@@ -136,21 +129,20 @@ class Contrastive(pl.LightningModule):
 
                 for dnam, rna_true,_ in dataloader_test_accuracy:
 
-                    best=-1.0
+                    best=0.0
                     best_rna = None
                     for _,rna,_ in dataloader_test_accuracy:
 
                         #print(self(dnam, rna), self(dnam, rna).values)
 
-                        result_dnam, result_rna =self(dnam, rna)
-                        cos = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
-                        result = cos(result_dnam, result_rna)
+                        result=self(dnam, rna).item()
 
                         if result>best:
 
                             best = result
                             best_rna = rna
 
+                    print(best)
                     if torch.equal(best_rna,rna_true):
                         found_correct+=1
 
